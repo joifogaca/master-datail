@@ -45,6 +45,18 @@ export class CategoryFormComponent implements OnInit, AfterContentChecked {
     this.setPageTitle();
   }
 
+  submitForm(){
+    this.submittingForm = true;
+
+    if(this.currentAction == 'new') {
+      this.createCategory();
+    }else 
+    {
+      this.updateCategory();
+    }
+
+  }
+
   //private methods
   private setCurrentAction(){
     if (this.route.snapshot.url[0].path === 'new')
@@ -58,8 +70,8 @@ export class CategoryFormComponent implements OnInit, AfterContentChecked {
 
   private buildCategoryForm(){
     this.categoryForm = this.formBuilder.group({
-      id:[null],
-      name: [null, Validators.required, Validators.minLength(2)],
+      id: [null],
+      name: [null, [Validators.required, Validators.minLength(2)]],
       description: [null]
     });
   }
@@ -85,6 +97,49 @@ export class CategoryFormComponent implements OnInit, AfterContentChecked {
       const categoryName = this.category.name || '';
       this.pageTitle = 'Editando Categoria: ' + categoryName;
     }
+  }
+
+  private createCategory() {
+    const category: Category = Object.assign(new Category(), this.categoryForm.value);
+
+    this.categoryService.create(category)
+    .subscribe(
+      // tslint:disable-next-line: no-shadowed-variable
+      category => this.actionForSuccess(category),
+      error => this.actionsForError(error)
+    );
+  }
+
+  private actionForSuccess(category: Category) {
+    toastr.success('Solicitação processada com sucessso!');
+
+    // skipLocation não armezar historico navegaodor, nao volta pra essa pagina no voltaar
+    this.router.navigateByUrl('categories', { skipLocationChange: true })
+    .then(() => this.router.navigate(['categories', 'edit', category.id]));
+
+  }
+
+  private actionsForError(error) {
+    toastr.error('Um erro ao processar a sua solicitação');
+
+    this.submittingForm = false;
+
+    if(error.status === 422) {
+      this.serverErrorMessages = JSON.parse(error.body).errors;
+    } else {
+      this.serverErrorMessages = ['Falha na comunicação com o servidor. Por favor, tente mais tarde'];
+    }
+  }
+
+  private updateCategory() {
+    const category: Category = Object.assign(new Category(), this.categoryForm.value);
+
+    this.categoryService.update(category)
+    .subscribe(
+      // tslint:disable-next-line: no-shadowed-variable
+      category => this.actionForSuccess(category),
+      error => this.actionsForError(error)
+    );
   }
 
 }
